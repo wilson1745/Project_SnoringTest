@@ -14,8 +14,8 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-   private TextView time_v, snore_v, active_v;
-   private Button btn_play, btn_stop, btn_track_off, btn_restart, btn_chart;
+   private TextView time_v, snore_v, active_v, sound_v;
+   private Button btn_play, btn_stop, btn_track_off, btn_restart, btn_sound;
    private TimeThread timeThread;
    private boolean isRunning = true;
    private boolean run = true;
@@ -71,6 +71,13 @@ public class MainActivity extends AppCompatActivity {
             timeThread.start();
          }
       });
+
+      btn_sound.setOnClickListener(new View.OnClickListener() {
+         @Override
+         public void onClick(View v) {
+
+         }
+      });
    }
 
    private void findView() {
@@ -81,6 +88,8 @@ public class MainActivity extends AppCompatActivity {
       btn_stop = findViewById(R.id.btn_stop);
       btn_track_off = findViewById(R.id.btn_track_off);
       btn_restart = findViewById(R.id.btn_restart);
+      btn_sound = findViewById(R.id.btn_sound);
+      sound_v = findViewById(R.id.sound_view);
    }
 
    public class TimeThread extends Thread {

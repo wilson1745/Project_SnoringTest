@@ -1,6 +1,7 @@
 package wilson.com.project_snoringtest;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.os.Message;
@@ -36,7 +37,7 @@ import io.reactivex.schedulers.Schedulers;
 public class MainActivity extends AppCompatActivity {
 
    private TextView time_v, snore_v, active_v, sound_v, snoring_v;
-   private Button btn_play, btn_stop, btn_track_off, btn_restart, btn_sound, btn_stop_snore;
+   private Button btn_play, btn_stop, btn_track_off, btn_restart, btn_sound, btn_stop_snore, btn_chart;
    private TimeThread timeThread;
    private boolean isRunning = true;
    private boolean run = true;
@@ -173,6 +174,16 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "vital: " + String.valueOf(vital));
             Log.e(TAG, "account: " + account);
             countSnoring.clear();
+         }
+      });
+
+      btn_chart.setOnClickListener(new View.OnClickListener() {
+         @Override
+         public void onClick(View v) {
+            Intent intent = new Intent(MainActivity.this, BarchartActivity.class);
+            intent.setAction("send active_list");
+            intent.putExtra("active_list", active_list);
+            startActivity(intent);
          }
       });
    }
@@ -366,6 +377,7 @@ public class MainActivity extends AppCompatActivity {
       audioWave = findViewById(R.id.audioWave);
       snoring_v = findViewById(R.id.snoring_view);
       btn_stop_snore = findViewById(R.id.btn_stopsnore);
+      btn_chart = findViewById(R.id.btn_chart);
    }
 
    public class TimeThread extends Thread {

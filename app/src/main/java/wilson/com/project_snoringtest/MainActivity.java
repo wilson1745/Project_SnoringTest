@@ -1,6 +1,7 @@
 package wilson.com.project_snoringtest;
 
 import android.annotation.SuppressLint;
+import android.hardware.Camera;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -14,18 +15,28 @@ import android.widget.Toast;
 import com.czt.mp3recorder.MP3Recorder;
 import com.shuyu.waveview.AudioWaveView;
 import com.shuyu.waveview.FileUtils;
+import com.vondear.rxtools.RxVibrateTool;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.Flowable;
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
 
-   private TextView time_v, snore_v, active_v, sound_v;
-   private Button btn_play, btn_stop, btn_track_off, btn_restart, btn_sound;
+   private TextView time_v, snore_v, active_v, sound_v, snoring_v;
+   private Button btn_play, btn_stop, btn_track_off, btn_restart, btn_sound, btn_stop_snore;
    private TimeThread timeThread;
    private boolean isRunning = true;
    private boolean run = true;
@@ -41,6 +52,23 @@ public class MainActivity extends AppCompatActivity {
    private List<Integer> countSnoring;
    private Handler mUIHandler;
    boolean isPause = false;
+
+   private Disposable subscribe;
+   private Disposable subscribe1;
+   private Disposable subscribe2;
+   private Disposable subscribe3;
+
+   int countOnce = 0;
+   int countMore = 0;
+   int count = 0;
+   /**
+    * 是否处于打鼾状态
+    */
+   boolean isStartVibrate = false;
+   boolean isFlash = false;
+   private int setValue = 60;
+   Date mEndDate;
+   Date mStartDate;
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +128,41 @@ public class MainActivity extends AppCompatActivity {
             resolveRecord();
          }
       });
+
+      btn_stop_snore.setOnClickListener(new View.OnClickListener() {
+         @Override
+         public void onClick(View v) {
+            if (!subscribe.isDisposed()) {
+               subscribe.dispose();
+            }
+            if (!subscribe1.isDisposed()) {
+               subscribe1.dispose();
+            }
+            if (!subscribe2.isDisposed()) {
+               subscribe2.dispose();
+            }
+            if (!subscribe3.isDisposed()) {
+               subscribe3.dispose();
+            }
+            isStartVibrate = false;
+            if (mRecorder != null && mRecorder.isRecording()) {
+               mRecorder.setPause(false);
+               mRecorder.stop();
+               audioWave.stopView();
+            }
+            int cCount = countSnoring.size();
+            mEndDate = new Date();
+            long dur = mEndDate.getTime() - mStartDate.getTime();
+            float vital = (float) cCount * 100000 / dur;
+            String account = String.format(Locale.CHINA, "%.2f%%", vital);
+
+            Log.e(TAG, "cCount: " + cCount);
+            Log.e(TAG, "dur: " + String.valueOf(dur));
+            Log.e(TAG, "vital: " + String.valueOf(vital));
+            Log.e(TAG, "account: " + account);
+            countSnoring.clear();
+         }
+      });
    }
 
    @SuppressLint("HandlerLeak")
@@ -123,8 +186,6 @@ public class MainActivity extends AppCompatActivity {
       int size = ScreenUtils.getScreenWidth() / offset;//控件默认的间隔是1
       mRecorder.setDataList(audioWave.getRecList(), size);
 
-
-
       mRecorder.setErrorHandler(new Handler() {
          @Override
          public void handleMessage(Message msg) {
@@ -138,6 +199,118 @@ public class MainActivity extends AppCompatActivity {
       integerList.clear();
       countSnoring.clear();
 
+      /**
+       * 打鼾状态检测，一秒轮循检测，监测机制
+       * 1.大于60分贝的话记录，一秒内超过某分贝即为打鼾(一秒内记录值大约为20次，超过三次，低于十五次即为打鼾，否则为其他状态)
+       * 2.
+       *
+       */
+
+      subscribe = Observable.interval(1, TimeUnit.SECONDS).subscribe(new Consumer<Long>() {
+         @SuppressLint("CheckResult")
+         @Override
+         public void accept(Long aLong) throws Exception {
+            if (integerList.size() > 0) {
+               countOnce = 0;
+               countMore = 0;
+               count = 0;
+               Observable.fromIterable(integerList).subscribe(new Consumer<Integer>() {
+                  @Override
+                  public void accept(Integer integer) throws Exception {
+                     Log.e(TAG, "進到Observable.fromIterable....accept中");
+                     if (integer > setValue) {
+                        Log.e(TAG, "integer > setValue");
+                        countOnce += integer;
+                        ++count;
+                     }
+                     countMore += integer;
+                  }
+               }, new Consumer<Throwable>() {
+                  @Override
+                  public void accept(Throwable throwable) throws Exception {
+
+                  }
+               });
+               Log.e("一秒数据", Arrays.toString(integerList.toArray()));
+
+               int iOnce = countOnce / 3;
+               int iMore = countMore / integerList.size();
+
+
+               if (iOnce > setValue) {
+                  countStatus.add(iOnce);
+               }
+               Log.e("Count", count + "--");
+               if (isStartVibrate && iMore > setValue && count <= (16 >= integerList.size() ? integerList.size()
+                       : 16) && !isPause) {
+                  countSnoring.add(iMore);
+                  RxVibrateTool.vibrateOnce(MainActivity.this, 300);
+
+               }
+               integerList.clear();
+            }
+         }
+      });
+      countStatus.clear();
+
+      /**
+       * 检测是否处于打鼾状态
+       */
+      subscribe1 = Observable.interval(10, TimeUnit.SECONDS).subscribe(new Consumer<Long>() {
+         @Override
+         public void accept(Long aLong) throws Exception {
+            /**
+             *
+             */
+            if (5 <= countStatus.size()) {
+               countSnoring.add(countStatus.size());
+               if (!isStartVibrate && !isPause) {
+                  RxVibrateTool.vibrateOnce(MainActivity.this, 1000);
+               }
+               countStatus.clear();
+               isStartVibrate = true;
+            } else {
+               isStartVibrate = false;
+            }
+         }
+      });
+
+      /**
+       * 开启超时检测打鼾，一分钟后  一定时间内开启，否则关闭打鼾状态
+       */
+      subscribe2 = Observable.timer(1, TimeUnit.MINUTES)
+              .subscribeOn(Schedulers.io())
+              .observeOn(AndroidScheduler.mainThread())
+              .subscribe(new Consumer<Long>() {
+                 @Override
+                 public void accept(Long aLong) throws Exception {
+                    isStartVibrate = false;
+                 }
+              }, new Consumer<Throwable>() {
+                 @Override
+                 public void accept(Throwable throwable) throws Exception {
+
+                 }
+              });
+      subscribe3 = Flowable.interval(500, TimeUnit.MILLISECONDS).subscribe(new Consumer<Long>() {
+         @Override
+         public void accept(Long aLong) throws Exception {
+            if (countSnoring.size() >= 15) {
+               isFlash = !isFlash;
+               if (isFlash) {
+                  //openCameraFlash();
+               } else {
+                  //closeCameraFlash();
+               }
+            }
+         }
+      }, new Consumer<Throwable>() {
+         @Override
+         public void accept(Throwable throwable) throws Exception {
+
+         }
+      });
+
       try {
          mRecorder.start(new CustomMp3Recorder.VolumeListener() {
             @Override
@@ -150,13 +323,13 @@ public class MainActivity extends AppCompatActivity {
                         sound_v.setText(String.valueOf(value));
                         //integerList.add(value);
                         Log.e(TAG, "sound_v: " + value);
+                        integerList.add(value);
                         //Log.e(TAG, "integerList.size: " + integerList.size());
                      }
                   }
                });
             }
          });
-         //audioWave.startView();
       } catch (IOException e) {
          e.printStackTrace();
          Toast.makeText(this, "权限未获取", Toast.LENGTH_SHORT).show();
@@ -165,6 +338,7 @@ public class MainActivity extends AppCompatActivity {
       }
       Log.e(TAG, "So far so good!!!!!!");
       //resolveRecordUI();
+      mStartDate = new Date();
    }
 
    private void findView() {
@@ -178,6 +352,8 @@ public class MainActivity extends AppCompatActivity {
       btn_sound = findViewById(R.id.btn_sound);
       sound_v = findViewById(R.id.sound_view);
       audioWave = findViewById(R.id.audioWave);
+      snoring_v = findViewById(R.id.snoring_view);
+      btn_stop_snore = findViewById(R.id.btn_stopsnore);
    }
 
    public class TimeThread extends Thread {

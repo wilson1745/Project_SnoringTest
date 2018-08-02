@@ -12,11 +12,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.czt.mp3recorder.MP3Recorder;
+import com.shuyu.waveview.AudioWaveView;
 import com.shuyu.waveview.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
@@ -32,15 +35,26 @@ public class MainActivity extends AppCompatActivity {
    private String TAG = "MainActivity";
    CustomMp3Recorder mRecorder;
    String filePath;
+   AudioWaveView audioWave;
+   private List<Integer> countStatus;
+   private List<Integer> integerList;
+   private List<Integer> countSnoring;
+   private Handler mUIHandler;
+   boolean isPause = false;
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
       setContentView(R.layout.activity_main);
 
+      mUIHandler = new Handler();
+      integerList = new ArrayList<>();
+      countStatus = new ArrayList<>();
+      countSnoring = new ArrayList<>();
+
       active_list = new ArrayList<>();
 
-      timeThread = new TimeThread();
+      //timeThread = new TimeThread();
       findView();
 
       btn_play.setOnClickListener(new View.OnClickListener() {
@@ -100,11 +114,16 @@ public class MainActivity extends AppCompatActivity {
             return;
          }
       }
+      if(file.exists()) {
+         Log.e(TAG, "file is exists!!!!!!");
+      }
       int offset = SizeUtils.dp2px(1);
-      /*filePath = FileUtils.getAppPath() + UUID.randomUUID().toString() + ".mp3";
+      filePath = FileUtils.getAppPath() + UUID.randomUUID().toString() + ".mp3";
       mRecorder = new CustomMp3Recorder(new File(filePath));
       int size = ScreenUtils.getScreenWidth() / offset;//控件默认的间隔是1
       mRecorder.setDataList(audioWave.getRecList(), size);
+
+
 
       mRecorder.setErrorHandler(new Handler() {
          @Override
@@ -119,7 +138,6 @@ public class MainActivity extends AppCompatActivity {
       integerList.clear();
       countSnoring.clear();
 
-
       try {
          mRecorder.start(new CustomMp3Recorder.VolumeListener() {
             @Override
@@ -130,19 +148,23 @@ public class MainActivity extends AppCompatActivity {
                      int value = volume.intValue();
                      if (!isPause) {
                         sound_v.setText(String.valueOf(value));
-                        integerList.add(value);
+                        //integerList.add(value);
+                        Log.e(TAG, "sound_v: " + value);
+                        //Log.e(TAG, "integerList.size: " + integerList.size());
                      }
                   }
                });
             }
          });
-         audioWave.startView();
+         //audioWave.startView();
       } catch (IOException e) {
          e.printStackTrace();
          Toast.makeText(this, "权限未获取", Toast.LENGTH_SHORT).show();
-         resolveError();
+         //resolveError();
          return;
-      }*/
+      }
+      Log.e(TAG, "So far so good!!!!!!");
+      //resolveRecordUI();
    }
 
    private void findView() {
@@ -155,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
       btn_restart = findViewById(R.id.btn_restart);
       btn_sound = findViewById(R.id.btn_sound);
       sound_v = findViewById(R.id.sound_view);
+      audioWave = findViewById(R.id.audioWave);
    }
 
    public class TimeThread extends Thread {

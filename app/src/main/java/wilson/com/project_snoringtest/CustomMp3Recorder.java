@@ -16,6 +16,7 @@ import com.czt.mp3recorder.util.LameUtil;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+
 public class CustomMp3Recorder extends BaseRecorder {
    private static final int DEFAULT_AUDIO_SOURCE = 1;
    private static final int DEFAULT_SAMPLING_RATE = 44100;
@@ -58,8 +59,10 @@ public class CustomMp3Recorder extends BaseRecorder {
          this.initAudioRecorder();
          this.listener = listener;
          try {
+            Log.e("TAG", "initAudioRecorder");
             this.mAudioRecord.startRecording();
          } catch (Exception var2) {
+            Log.e("TAG", "Fuck");
             var2.printStackTrace();
          }
 
@@ -147,7 +150,8 @@ public class CustomMp3Recorder extends BaseRecorder {
    }
 
    private void initAudioRecorder() throws IOException {
-      this.mBufferSize = AudioRecord.getMinBufferSize('걄', 16, DEFAULT_AUDIO_FORMAT.getAudioFormat());
+      //this.mBufferSize = AudioRecord.getMinBufferSize('걄', 16, DEFAULT_AUDIO_FORMAT.getAudioFormat());
+      this.mBufferSize = AudioRecord.getMinBufferSize(DEFAULT_SAMPLING_RATE, DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT.getAudioFormat());
       int bytesPerFrame = DEFAULT_AUDIO_FORMAT.getBytesPerFrame();
       int frameSize = this.mBufferSize / bytesPerFrame;
       if (frameSize % 160 != 0) {
@@ -155,9 +159,11 @@ public class CustomMp3Recorder extends BaseRecorder {
          this.mBufferSize = frameSize * bytesPerFrame;
       }
 
-      this.mAudioRecord = new AudioRecord(1, '걄', 16, DEFAULT_AUDIO_FORMAT.getAudioFormat(), this.mBufferSize);
+      //this.mAudioRecord = new AudioRecord(1, '걄', 16, DEFAULT_AUDIO_FORMAT.getAudioFormat(), this.mBufferSize);
+      this.mAudioRecord = new AudioRecord(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLING_RATE, DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT.getAudioFormat(), this.mBufferSize);
       this.mPCMBuffer = new short[this.mBufferSize];
-      LameUtil.init('걄', 1, '걄', 32, 7);
+      //LameUtil.init('걄', 1, '걄', 32, 7);
+      LameUtil.init(DEFAULT_SAMPLING_RATE, DEFAULT_LAME_IN_CHANNEL, DEFAULT_SAMPLING_RATE, DEFAULT_LAME_MP3_BIT_RATE, DEFAULT_LAME_MP3_QUALITY);
       this.mEncodeThread = new DataEncodeThread(this.mRecordFile, this.mBufferSize);
       this.mEncodeThread.start();
       this.mAudioRecord.setRecordPositionUpdateListener(this.mEncodeThread, this.mEncodeThread.getHandler());
@@ -195,6 +201,7 @@ public class CustomMp3Recorder extends BaseRecorder {
    }
 
    public void setDataList(ArrayList<Short> dataList, int maxSize) {
+      Log.e("CustomMp3Recorder", "setDataList is working!!!!!");
       this.dataList = dataList;
       this.mMaxSize = maxSize;
    }

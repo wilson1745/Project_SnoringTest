@@ -70,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
    Date mEndDate;
    Date mStartDate;
 
+   int last = 0, sum = 0;
+
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
@@ -82,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
       active_list = new ArrayList<>();
 
-      //timeThread = new TimeThread();
+      timeThread = new TimeThread();
       findView();
 
       btn_play.setOnClickListener(new View.OnClickListener() {
@@ -150,6 +152,16 @@ public class MainActivity extends AppCompatActivity {
                mRecorder.stop();
                audioWave.stopView();
             }
+
+            sum = countSnoring.size() - last;
+            last = countSnoring.size();
+            active_list.add(sum);
+
+            active++;
+            Log.e(TAG, "active: " + active);
+            Log.e(TAG, "sum: " + sum);
+
+
             int cCount = countSnoring.size();
             mEndDate = new Date();
             long dur = mEndDate.getTime() - mStartDate.getTime();
@@ -322,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
                      if (!isPause) {
                         sound_v.setText(String.valueOf(value));
                         //integerList.add(value);
-                        Log.e(TAG, "sound_v: " + value);
+                        //Log.e(TAG, "sound_v: " + value);
                         integerList.add(value);
                         //Log.e(TAG, "integerList.size: " + integerList.size());
                      }
@@ -336,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
          //resolveError();
          return;
       }
-      Log.e(TAG, "So far so good!!!!!!");
+      //Log.e(TAG, "So far so good!!!!!!");
       //resolveRecordUI();
       mStartDate = new Date();
    }
@@ -393,10 +405,23 @@ public class MainActivity extends AppCompatActivity {
 
                if((second % 3600) == 0) {
                   active++;
-                  Log.e(TAG, "時段換算");
-                  Log.e(TAG, "second: " + second);
+
+                  if(last == 0) {
+                     last = countSnoring.size();
+                     sum = last;
+                     active_list.add(sum);
+                  }
+                  else {
+                     sum = countSnoring.size() - last;
+                     last = countSnoring.size();
+                     active_list.add(sum);
+                  }
+
                   Log.e(TAG, "active: " + active);
+                  Log.e(TAG, "sum: " + sum);
+
                   active_v.setText(String.valueOf(active));
+                  second = 0;
                }
                break;
             default:
